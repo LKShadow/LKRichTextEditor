@@ -32,11 +32,12 @@ TODO: Add long description of the pod here.
 
   s.source_files = 'LKRichTextEditor/Classes/**/*'
   
-  # s.resource_bundles = {
-  #   'LKRichTextEditor' => ['LKRichTextEditor/Assets/*.png']
-  # }
+   s.resource_bundles = {
+     'LKRichTextEditor' => ['LKRichTextEditor/Assets/LKEditorImageResource.xcassets']
+   }
 
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
-  # s.dependency 'AFNetworking', '~> 2.3'
+   s.dependency 'Masonry', '~> 1.1.0'
+  
 end

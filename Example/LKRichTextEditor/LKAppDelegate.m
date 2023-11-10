@@ -7,13 +7,39 @@
 //
 
 #import "LKAppDelegate.h"
+#import "LKViewController.h"
 
 @implementation LKAppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-    // Override point for customization after application launch.
+    self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    self.window.backgroundColor = [UIColor whiteColor];
+    
+    LKViewController *homeVc = [[LKViewController alloc] init];
+    UINavigationController *navc = [[UINavigationController alloc] initWithRootViewController:homeVc];
+    [self configNavigationController:navc];
+    self.window.rootViewController = navc;
+    [self.window makeKeyAndVisible];
+    
     return YES;
+}
+
+- (void)configNavigationController:(UINavigationController *)navc {
+    
+    if (@available(iOS 13.0, *)) {
+        UINavigationBarAppearance *apperance = [[UINavigationBarAppearance alloc] init];
+        apperance.backgroundColor = [UIColor orangeColor];
+        apperance.shadowImage = [UIImage new];
+        
+        navc.navigationBar.standardAppearance = apperance;
+        navc.navigationBar.scrollEdgeAppearance = apperance;
+    } else {
+        [navc.navigationBar setTranslucent:NO];
+        [navc.navigationBar setBarTintColor:[UIColor orangeColor]];
+        [navc.navigationBar setTitleTextAttributes:@{NSForegroundColorAttributeName:[UIColor whiteColor]}];
+    }
+    
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application
