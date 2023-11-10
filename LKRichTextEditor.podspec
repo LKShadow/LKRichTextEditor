@@ -35,9 +35,11 @@ Pod::Spec.new do |s|
    s.resource_bundles = {
      'LKRichTextEditor' => ['LKRichTextEditor/Assets/LKEditorImageResource.xcassets']
    }
+   s.pod_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
+   s.user_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
 
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
-   s.dependency 'Masonry', '~> 1.1.0'
+#   s.dependency 'Masonry', '~> 1.1.0'
   
 end

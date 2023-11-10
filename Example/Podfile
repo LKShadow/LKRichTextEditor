@@ -5,7 +5,7 @@ platform :ios, '10.0'
 
 target 'LKRichTextEditor_Example' do
   pod 'LKRichTextEditor', :path => '../'
-
+  pod 'Masonry', '~> 1.1.0'
   target 'LKRichTextEditor_Tests' do
     inherit! :search_paths
 
