@@ -17,6 +17,15 @@
 
 @implementation LKEditorImagePicker
 
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        
+    }
+    return self;
+}
+
 - (UIImagePickerController *)pickerController {
     if (_pickerController) return _pickerController;
     UIImagePickerController *pickerController = [[UIImagePickerController alloc] init];
@@ -27,11 +36,24 @@
     return pickerController;
 }
 
-- (void)showWithCompletion:(void (^)(UIImage * _Nonnull))completion {
+- (void)showWithTextEditor:(UITextView *)textView completion:(void (^)(UIImage * _Nonnull))completion {
     if (completion) {
         self.selectImage = completion;
     }
+    textView.inputView = self;
+    [textView resignFirstResponder];
+    [textView becomeFirstResponder];
+
+    [self requestPhotoLibraryPermission];
     
+}
+
+- (void)presentImagePickerController {
+    UIViewController *rootController = [UIApplication sharedApplication].delegate.window.rootViewController;
+    [rootController presentViewController:self.pickerController animated:YES completion:nil];
+}
+
+- (void)requestPhotoLibraryPermission {
     PHAuthorizationStatus status = [PHPhotoLibrary authorizationStatus];
     
     switch (status) {
@@ -59,11 +81,6 @@
             [self handleLimitedPhotoLibraryPermission]; // 处理相册权限受限的情况
             break;
     }
-}
-
-- (void)presentImagePickerController {
-    UIViewController *rootController = [UIApplication sharedApplication].delegate.window.rootViewController;
-    [rootController presentViewController:self.pickerController animated:YES completion:nil];
 }
 
 - (void)handlePhotoLibraryPermissionDenied {

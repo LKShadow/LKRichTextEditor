@@ -7,7 +7,6 @@
 
 #import "LKEditorToolBarView.h"
 #import "UIImage+Editor.h"
-#import "LKEditorImagePicker.h"
 
 @interface LKEditorToolBarView (){
     CGFloat _itemWidth;// 单个item的宽度
@@ -21,7 +20,6 @@
 /// 存储所有的按钮 以类型为key
 @property (nonatomic, strong) NSMutableDictionary<NSNumber *, UIButton *> *actionCache;
 
-@property (nonatomic, strong) LKEditorImagePicker *imagePicker;
 @end
 
 @implementation LKEditorToolBarView
@@ -32,7 +30,6 @@
     if (self) {
         self.actionCache = [NSMutableDictionary dictionary];
         _itemWidth = 50;
-        self.imagePicker = [[LKEditorImagePicker alloc] init];
         [self initSubviews];
     }
     return self;
@@ -105,11 +102,9 @@
             break;
         }
         case TextFormattingStyleImage: {
-            [self.imagePicker showWithCompletion:^(UIImage * _Nonnull pickerImage) {
-                if ([self.delegate respondsToSelector:@selector(toolBarClickTextFormattingStyle:withActionValue:)]) {
-                    [self.delegate toolBarClickTextFormattingStyle:style withActionValue:pickerImage];
-                }
-            }];
+            if ([self.delegate respondsToSelector:@selector(toolBarClickTextFormattingStyle:withActionValue:)]) {
+                [self.delegate toolBarClickTextFormattingStyle:style withActionValue:nil];
+            }
             break;
         }
             

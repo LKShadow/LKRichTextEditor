@@ -10,9 +10,9 @@
 #import "UIFont+TextFormat.h"
 #import "LKHTMLParser.h"
 #import "LKEditorToolBarView.h"
-#import "LKEditorImagePicker.h"
 
 @interface LKEditorTextView ()<LKEditorToolBarViewDelegate>
+
 /** 工具栏视图设置，默认使用 LKEditorToolBarView */
 @property (nonatomic, strong) LKEditorToolBarView *toolBarView;
 
@@ -53,6 +53,7 @@
         self.contentOffset = CGPointMake(self.placeholderEdgeInsets.left, self.placeholderEdgeInsets.top);
         self.textFormateStyleCache = [NSMutableDictionary dictionary];
         
+        self.imagePicker = [[LKEditorImagePicker alloc] init];
         self.parser = [[LKHTMLParser alloc] init];
         [self configPlaceHolder];
         
@@ -174,7 +175,7 @@
 #pragma mark - LKEditorToolBarViewDelegate 工具栏点击事件
 - (void)toolBarClickTextFormattingStyle:(TextFormattingStyle)style withActionValue:(id)value {
     _actionType = style;
-    [self.textFormateStyleCache setObject:value forKey:@(style)];// 缓存状态
+    [self.textFormateStyleCache setObject:value ?: @"" forKey:@(style)];// 缓存状态
     
     switch (style) {
         case TextFormattingStyleBold:{
@@ -188,9 +189,10 @@
             [self setUnderlineInRange];
             break;
         case TextFormattingStyleImage: {
-            if ([value isKindOfClass:[UIImage class]]) {
-                [self insertImageInRange:(UIImage *)value];
-            }
+            [self.imagePicker showWithTextEditor:self completion:^(UIImage * _Nonnull pickerImage) {
+                [self insertImageInRange:pickerImage];
+            }];
+            break;
         }
         default:
             break;

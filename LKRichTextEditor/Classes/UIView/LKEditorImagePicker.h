@@ -6,14 +6,13 @@
 //
 
 #import <Foundation/Foundation.h>
-
 NS_ASSUME_NONNULL_BEGIN
 @protocol LKEditorImagePickerProtocol
 
-- (void)showWithCompletion:(void (^) (UIImage *pickerImage))completion;
+- (void)showWithTextEditor:(UITextView *)textView completion:(void (^) (UIImage *pickerImage))completion;
 
 @end
-@interface LKEditorImagePicker : NSObject<LKEditorImagePickerProtocol>
+@interface LKEditorImagePicker : UIView<LKEditorImagePickerProtocol>
 
 @end
 

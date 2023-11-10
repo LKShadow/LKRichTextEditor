@@ -6,6 +6,8 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "LKEditorImagePicker.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
 
@@ -27,7 +29,9 @@ typedef NS_ENUM(NSInteger, TextFormattingStyle) {
 
 @end
 
-@interface LKEditorTextView : UITextView
+@interface LKEditorTextView : UITextView<LKEditorImagePickerProtocol>
+// 图片选择器视图
+@property (nonatomic, strong) id <LKEditorImagePickerProtocol> imagePicker;
 
 @property (nonatomic, weak) id <LKRichTextEditorDelegate>toolBarDelegate;
 /** 是否显示键盘工具栏 默认显示*/
