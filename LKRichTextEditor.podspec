@@ -18,17 +18,17 @@ Pod::Spec.new do |s|
 #   * Finally, don't worry about the indent, CocoaPods strips it!
 
   s.description      = <<-DESC
-TODO: Add long description of the pod here.
+  基于uitextview的富文本编辑器，支持粗体、下划线、斜体、插入图片功能，富文本转html，html转富文本
                        DESC
 
-  s.homepage         = 'https://github.com/李考/LKRichTextEditor'
+  s.homepage         = 'https://github.com/LKShadow/LKRichTextEditor'
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { '李考' => '10857553@boe.com.cn' }
-  s.source           = { :git => 'https://github.com/李考/LKRichTextEditor.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/LKShadow/LKRichTextEditor.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
-  s.ios.deployment_target = '10.0'
+  s.ios.deployment_target = '9.0'
 
   s.source_files = 'LKRichTextEditor/Classes/**/*'
   
