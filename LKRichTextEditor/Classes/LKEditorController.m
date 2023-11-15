@@ -40,14 +40,12 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
         self.showKeyboard = NO;
         self.actionType = TextFormattingStyleNormal;
         [self addKeyboardNotifications];
+        [self configDefaultValue];
     }
     return self;
 }
-// 自定义工具栏位置
-- (void)showTextToolBarInView:(UIView *)showView {
-    NSAssert(showView, @"父view不能nil");
-    if (!showView) return;
-    [showView addSubview:self.toolBarView];
+
+- (void)configDefaultValue {
     // 获取主窗口
     UIWindow *mainWindow = [[[UIApplication sharedApplication] delegate] window];
     // 获取底部安全范围的高度
@@ -55,6 +53,14 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
     if (@available(iOS 11.0, *)) {
         bottomSafeAreaHeight = mainWindow.safeAreaInsets.bottom;
     }
+}
+
+// 自定义工具栏位置
+- (void)showTextToolBarInView:(UIView *)showView {
+    NSAssert(showView, @"父view不能nil");
+    if (!showView) return;
+    [showView addSubview:self.toolBarView];
+    
     [self refreshToolBarFrame];
     
 }
@@ -93,18 +99,8 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
             break;
         }
         case TextFormattingStyleImage: {
-            if ([self.editor isEditable]) {
-                [self.editor endEditing:YES];
-            }
+            [self.editor endEditing:YES];
             [self refreshToolBarFrame];
-            if (!self.imagePicker.superview) {
-                [self.toolBarView addSubview:self.imagePicker];
-                [self.imagePicker mas_remakeConstraints:^(MASConstraintMaker *make) {
-                    make.left.right.offset(0);
-                    make.bottom.offset(0);
-                    make.height.mas_equalTo(Editor_ImageSelected_Height);
-                }];
-            }
             self.imagePicker.hidden = NO;
             [self.imagePicker showWithTextEditor:self.editor completion:^(UIImage * _Nonnull pickerImage) {
                 [self.editor toolBarItemSelectedStateAction:style withActionValue:pickerImage];
@@ -137,9 +133,13 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
 /// 图片选择界面
 - (LKEditorImagePicker<LKEditorImagePickerProtocol> *)imagePicker {
     if (_imagePicker) return _imagePicker;
-    CGSize size = [UIScreen mainScreen].bounds.size;
-    CGRect frame = CGRectMake(0, 0, size.width, keyboardHeight - Editor_ToolBar_Height);
-    _imagePicker = [[LKEditorImagePicker alloc] initWithFrame:frame];
+    _imagePicker = [[LKEditorImagePicker alloc] init];
+    [_toolBarView addSubview:_imagePicker];
+    [_imagePicker mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.right.offset(0);
+        make.top.equalTo(_toolBarView.mas_top).offset(Editor_ToolBar_Height);
+        make.height.mas_equalTo(Editor_ImageSelected_Height);
+    }];
     return _imagePicker;
 }
 

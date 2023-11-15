@@ -26,6 +26,10 @@ NS_ASSUME_NONNULL_BEGIN
  * 返回 图像数据、UTI 和方向信息
  */
 + (void)fetchImageDataForAsset:(PHAsset *)asset completion:(void (^)(NSData *imageData, NSString *uti, UIImageOrientation orientation))completion;
+
+/// 图片 压缩（在图片不失真的情况下压缩，尽量接近memory）
++ (UIImage *)compressionTheImaeg:(UIImage *)image maxMemory:(CGFloat)memory;
+
 @end
 
 NS_ASSUME_NONNULL_END

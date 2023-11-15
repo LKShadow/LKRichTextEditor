@@ -75,5 +75,29 @@
     
 }
 
-
+/// 图片 压缩
++ (UIImage *)compressionTheImaeg:(UIImage *)image maxMemory:(CGFloat)memory {
+    NSData *imageData = UIImageJPEGRepresentation(image,1);
+    CGFloat imageLength = [imageData length]/1000;
+    if (imageLength < memory) {
+        return image;
+    }
+    CGFloat compression = 1;
+    CGFloat max = 1;
+    CGFloat min = 0;
+    for (int i = 0; i < 6; ++i) {
+        compression = (max + min) / 2;
+        imageData = UIImageJPEGRepresentation(image, compression);
+        imageLength = imageData.length/ 1000;
+        if (imageLength < memory * 0.9) {
+            min = compression;
+        } else if (imageLength > memory) {
+            max = compression;
+        } else {
+            break;
+        }
+    }
+    UIImage *resultImage = [UIImage imageWithData:imageData];
+    return resultImage;
+}
 @end

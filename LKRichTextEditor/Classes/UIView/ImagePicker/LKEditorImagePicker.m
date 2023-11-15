@@ -77,7 +77,8 @@
     
     [self addSubview:self.collectionView];
     [self.collectionView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.top.right.offset(0);
+        make.left.right.offset(0);
+        make.top.equalTo(self.mas_top);
         make.bottom.offset(-50);
     }];
     
@@ -89,7 +90,7 @@
     
     [self.bottomToolView mas_makeConstraints:^(MASConstraintMaker *make) {
         make.left.right.offset(0);
-        make.bottom.offset(0);
+        make.bottom.offset(0).priorityLow();
         make.top.equalTo(self.collectionView.mas_bottom);
         make.height.mas_greaterThanOrEqualTo(50);
     }];
@@ -278,17 +279,14 @@
     
     [LKUISystemPhotoTool fetchImageDataForAsset:as completion:^(NSData * _Nonnull imageData, NSString * _Nonnull uti, UIImageOrientation orientation) {
         UIImage *origenImage = [UIImage imageWithData:imageData];
-        CGFloat imageQuqlity = 0.5;// 是否压缩，默认压一半
-        if (weakSelf.origenAlbumBtn.isSelected) {
-            imageQuqlity = 1.0;
+        UIImage *editImage = origenImage;// 是否压缩，默认压一半
+        if (!weakSelf.origenAlbumBtn.isSelected) {
+            editImage = [LKUISystemPhotoTool compressionTheImaeg:origenImage maxMemory:300];
         }
         if (weakSelf.selectImage) {
-            weakSelf.selectImage([UIImage imageWithData:UIImageJPEGRepresentation(origenImage, imageQuqlity)]);
+            weakSelf.selectImage(editImage);
         }
-        // 延时0.3秒后处理下一张图片
-//        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [weakSelf processAssetsWithDelay:assets currentIndex:index + 1];
-//        });
+        [weakSelf processAssetsWithDelay:assets currentIndex:index + 1];
     }];
 }
 
