@@ -6,8 +6,7 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "LKEditorImagePicker.h"
-
+@class LKEditorController;
 NS_ASSUME_NONNULL_BEGIN
 
 
@@ -20,30 +19,44 @@ typedef NS_ENUM(NSInteger, TextFormattingStyle) {
     TextFormattingStyleFontSize,    ///< 字体大小
     TextFormattingStyleImage,       ///< 图片
 };
+@protocol LKEditorEditProtocol <NSObject>
+/**
+ * 更新状态来对应的选中状态状态
+ *  @Param style 点击按钮对应的事件类型
+ *  @Param value 按钮事件后对应的选择的状态，或值 ，比如选择后的图片、选择的字体大小值
+*/
+- (void)toolBarItemSelectedStateAction:(TextFormattingStyle)style withActionValue:(id _Nullable)value;
 
-@protocol LKRichTextEditorDelegate <NSObject>
-
-@optional
-/** 获取键盘工具栏支持的样式数组 返回 @TextFormattingStyle） 默认粗体、斜体、下划线*/
-- (NSArray /**<TextFormattingStyle>*/*)supportToolBarItems;
 
 @end
 
-@interface LKEditorTextView : UITextView<LKEditorImagePickerProtocol>
-// 图片选择器视图
-@property (nonatomic, strong) id <LKEditorImagePickerProtocol> imagePicker;
+@protocol LKEditorImagePickerProtocol
+/** 图片选择协议*/
+- (void)showWithTextEditor:(UITextView *)textView completion:(void (^) (UIImage *pickerImage))completion;
 
-@property (nonatomic, weak) id <LKRichTextEditorDelegate>toolBarDelegate;
-/** 是否显示键盘工具栏 默认显示*/
-@property (nonatomic, assign) BOOL showKeyboardTool;
+@end
+
+
+@protocol LKEditorToolBarDataSourceDelegate <NSObject>
+
+@optional
+/** 获取键盘工具栏支持的样式数组 返回 @TextFormattingStyle） 默认粗体、斜体、下划线*/
+- (NSArray /**<TextFormattingStyle>*/<NSNumber *>*)supportToolBarItems;
+
+@end
+
+@interface LKEditorTextView : UITextView
+
+@property (nonatomic, weak) id <LKEditorToolBarDataSourceDelegate>toolBarDataSource;
 /** textview显示高度最小值，当小于该值时，placeholder会默认居中显示，当大于该值时，placeholder默认离顶部距离为6*/
 @property (nonatomic, assign) CGFloat minTextViewHeight;
 /** 占位文字 */
 @property (nonatomic, copy) NSString *placeholder;
 /** 占位文字颜色 */
 @property (nonatomic, strong) UIColor *placeholderColor;
+/** 工具栏相关控制管理器,只有设置datasource代理，才可以获取该值*/
+@property (nonatomic, strong, readonly) LKEditorController *editorController;
 
-    
 /**
  * html转富文本
  * completion：设置完成回调

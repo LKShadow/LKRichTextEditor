@@ -8,6 +8,9 @@
 #import "LKEditorToolBarView.h"
 #import "UIImage+Editor.h"
 
+/// 工具栏的高度，宽度默认屏幕宽度
+static CGFloat const Editor_ToolBar_Height = 40;
+
 @interface LKEditorToolBarView (){
     CGFloat _itemWidth;// 单个item的宽度
 }
@@ -26,7 +29,7 @@
 
 
 - (instancetype)init {
-    self = [super initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, Editor_ToolBar_Height)];
+    self = [super init];
     if (self) {
         self.actionCache = [NSMutableDictionary dictionary];
         _itemWidth = 50;
@@ -81,9 +84,16 @@
         [_stackView addArrangedSubview:itemButton];
     }
 
-    _scrollView.contentSize = CGSizeMake(_itemWidth * items.count , self.frame.size.height);
-    _stackView.frame = CGRectMake(0, 0, _scrollView.contentSize.width, _scrollView.contentSize.height);
+//    _scrollView.contentSize = CGSizeMake(_itemWidth * items.count , self.frame.size.height);
+//    _stackView.frame = CGRectMake(0, 0, _scrollView.contentSize.width, _scrollView.contentSize.height);
 
+}
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    NSArray *items = [self.formattingStyles copy];
+    _scrollView.frame = CGRectMake(0, 0, self.frame.size.width, Editor_ToolBar_Height);
+    _scrollView.contentSize = CGSizeMake(_itemWidth * items.count , Editor_ToolBar_Height);
+    _stackView.frame = CGRectMake(0, 0, _scrollView.contentSize.width, _scrollView.contentSize.height);
 }
 
 /** 工具栏按钮点击事件*/
@@ -96,12 +106,16 @@
         case TextFormattingStyleUnderline: {
             tapBtn.selected = !tapBtn.isSelected;
 
+            UIButton *imgBtn = [self.actionCache objectForKey:@(TextFormattingStyleImage)];
+            imgBtn.selected = NO;// 移除相册的选中效果
             if ([self.delegate respondsToSelector:@selector(toolBarClickTextFormattingStyle:withActionValue:)]) {
                 [self.delegate toolBarClickTextFormattingStyle:style withActionValue:@(tapBtn.isSelected)];
             }
             break;
         }
         case TextFormattingStyleImage: {
+            if (button.isSelected) return;
+            tapBtn.selected = YES;
             if ([self.delegate respondsToSelector:@selector(toolBarClickTextFormattingStyle:withActionValue:)]) {
                 [self.delegate toolBarClickTextFormattingStyle:style withActionValue:nil];
             }
@@ -122,6 +136,10 @@
             button.selected = [value boolValue];
         }
             break;
+        case TextFormattingStyleImage: {
+            button.selected = [value boolValue];
+            break;
+        }
             
         default:
             break;

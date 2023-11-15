@@ -9,12 +9,12 @@
 #import <Masonry/Masonry.h>
 #import "UIFont+TextFormat.h"
 #import "LKHTMLParser.h"
-#import "LKEditorToolBarView.h"
+//#import "LKEditorToolBarView.h"
+#import "LKEditorController.h"
 
-@interface LKEditorTextView ()<LKEditorToolBarViewDelegate>
+@interface LKEditorTextView ()<LKEditorEditProtocol>
 
-/** 工具栏视图设置，默认使用 LKEditorToolBarView */
-@property (nonatomic, strong) LKEditorToolBarView *toolBarView;
+@property (nonatomic, strong) LKEditorController *editorController;
 
 @property (nonatomic, strong) UILabel *placeHolderLabel;
 /** 设置占位文字的edge*/
@@ -42,66 +42,67 @@
     if (self) {
         
         self.showsHorizontalScrollIndicator = NO;
-        // 是否显示键盘工具栏
-        self.showKeyboardTool = YES;
-        // 设置默认颜色
-        self.placeholderColor = [UIColor colorWithRed:128.0f/255.0f green:128.0f/255.0f blue:128.0f/255.0f alpha:1.0f];
-        self.placeholder = @"请在此输入内容";
-        self.font = [UIFont systemFontOfSize:16];
-        self.minTextViewHeight = 40;
-        self.placeholderEdgeInsets = UIEdgeInsetsMake(6, 6, 0, -4);
-        self.contentOffset = CGPointMake(self.placeholderEdgeInsets.left, self.placeholderEdgeInsets.top);
-        self.textFormateStyleCache = [NSMutableDictionary dictionary];
+        [self initDefault];
         
-        self.imagePicker = [[LKEditorImagePicker alloc] init];
-        self.parser = [[LKHTMLParser alloc] init];
         [self configPlaceHolder];
-        
-        // 配置默认toolview
-        [self configKeyboardToolBarView];
         // 添加相关监听通知
         [self addNotification];
         
     }
     return self;
 }
+// 初始化默认值
+- (void)initDefault {
+    // 设置默认颜色
+    self.placeholderColor = [UIColor colorWithRed:128.0f/255.0f green:128.0f/255.0f blue:128.0f/255.0f alpha:1.0f];
+    self.placeholder = @"请在此输入内容";
+    self.font = [UIFont systemFontOfSize:16];
+    self.minTextViewHeight = 40;
+    self.placeholderEdgeInsets = UIEdgeInsetsMake(6, 6, 0, -4);
+    self.contentOffset = CGPointMake(self.placeholderEdgeInsets.left, self.placeholderEdgeInsets.top);
+    
+    self.actionType = TextFormattingStyleNormal;
+    
+    self.textFormateStyleCache = [NSMutableDictionary dictionary];
+
+    self.editorController = [[LKEditorController alloc] initWithEditor:self];
+    
+    self.parser = [[LKHTMLParser alloc] init];// 用于富文本与html转功能
+
+}
 
 - (void)addNotification {
     // 使用通知监听文字改变
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textDidChange:) name:UITextViewTextDidChangeNotification object:self];
-    //        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textDidChangeNotification:) name:UITextViewTextDidChangeNotification object:nil];
+    // 添加通知监听
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardWillShow:)
+                                                 name:UIKeyboardWillShowNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardWillHide:)
+                                                 name:UIKeyboardWillHideNotification
+                                               object:nil];
+
+
 }
 
 - (void)configPlaceHolder {
     [self addSubview:self.placeHolderLabel];
 }
 
-- (void)configKeyboardToolBarView {
-    if (!self.showKeyboardTool) {
-        self.inputAccessoryView = nil;
-        return;
-    };
-    if (self.toolBarView) {
-        self.inputAccessoryView = self.toolBarView;
-    } else {
-        LKEditorToolBarView *toolbarView = [[LKEditorToolBarView alloc] init];
-        toolbarView.delegate = self;
-        self.inputAccessoryView = toolbarView;
-        self.toolBarView = toolbarView;
-    }
-    [self.toolBarView updateToolbarItems:[self getToolBarItems]];
-    [self pointFocusChangedUpdateToolBarStyle];
-}
-
-- (NSArray *)getToolBarItems {
-    if (self.toolBarDelegate &&[self.toolBarDelegate respondsToSelector:@selector(supportToolBarItems)]) {
-        NSArray *list = [self.toolBarDelegate supportToolBarItems];
+- (NSArray <NSNumber *>*)getToolBarItems {
+    if (self.toolBarDataSource &&[self.toolBarDataSource respondsToSelector:@selector(supportToolBarItems)]) {
+        NSArray *list = [self.toolBarDataSource supportToolBarItems];
         return list;
     }
     return @[@(TextFormattingStyleBold),@(TextFormattingStyleItatic),@(TextFormattingStyleUnderline)];
 }
 - (void)textDidChange:(NSNotification *)note {
     self.placeHolderLabel.hidden = self.text.length > 0 || self.attributedText.string.length > 0;
+
+    [self updatePointFrameWithChanged];
+
 }
 - (void)layoutSubviews {
     [super layoutSubviews];
@@ -123,18 +124,6 @@
     
     CGRect rect = CGRectMake(adjustedLeft, pointY, adjustedWidth, placeholderSize.height);
     self.placeHolderLabel.frame = rect;
-}
-
-
-- (UILabel *)placeHolderLabel {
-    if (!_placeHolderLabel) {
-        _placeHolderLabel = [[UILabel alloc] init];
-        _placeHolderLabel.textColor = [UIColor lightGrayColor];
-        _placeHolderLabel.textAlignment = NSTextAlignmentLeft;
-        _placeHolderLabel.font = self.font;
-        _placeHolderLabel.text = @"请在此输入内容";
-    }
-    return _placeHolderLabel;
 }
 #pragma mark - 修改输入的富文本
 - (NSDictionary *)updateTypeAttribute {
@@ -162,6 +151,13 @@
             }
             break;
         }
+        case TextFormattingStyleNormal:
+        case TextFormattingStyleImage: {
+            // 插入图片后，设置默认字体
+            UIFont *font = [dict objectForKey:NSFontAttributeName] ?: [UIFont systemFontOfSize:15];;
+            [dict setObject:font forKey:NSFontAttributeName];
+            break;
+        }
             
         default:
             break;
@@ -172,11 +168,11 @@
     return dict;
 }
 
-#pragma mark - LKEditorToolBarViewDelegate 工具栏点击事件
-- (void)toolBarClickTextFormattingStyle:(TextFormattingStyle)style withActionValue:(id)value {
+#pragma mark - LKEditorEditProtocol
+- (void)toolBarItemSelectedStateAction:(TextFormattingStyle)style withActionValue:(id)value {
+    
     _actionType = style;
     [self.textFormateStyleCache setObject:value ?: @"" forKey:@(style)];// 缓存状态
-    
     switch (style) {
         case TextFormattingStyleBold:{
             [self setBoldInRange];
@@ -189,18 +185,56 @@
             [self setUnderlineInRange];
             break;
         case TextFormattingStyleImage: {
-            [self.imagePicker showWithTextEditor:self completion:^(UIImage * _Nonnull pickerImage) {
-                [self insertImageInRange:pickerImage];
-            }];
+            if ([value isKindOfClass:[UIImage class]]) {
+                [self insertImageInRange:(UIImage *)value];
+            }
+            [self.editorController.toolBarView updateToolBarItemSelectedState:TextFormattingStyleImage withActionValue:@(NO)];
+            _actionType = TextFormattingStyleNormal;
+            [self pointFocusChangedUpdateToolBarStyle];
+
+//            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+//                [self updatePointFrameWithChanged];
+//            });
             break;
         }
         default:
             break;
     }
     [self updateTypeAttribute];
-            
+}
+- (void)updatePointFrameWithChanged {
+    // 获取光标所在的文本范围
+    UITextPosition *cursorPosition = [self selectedTextRange].start;
+    CGRect caretRect = [self caretRectForPosition:cursorPosition];
+
+    // 将键盘的底部坐标转换为textView的坐标系
+    CGPoint keyboardBottomInTextView = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMaxY(self.bounds));
+    keyboardBottomInTextView = [self convertPoint:keyboardBottomInTextView toView:self];
+
+    // 如果光标被键盘遮挡，需要调整textView的contentOffset
+    CGFloat offsetNeeded = (CGRectGetMaxY(caretRect) ) - keyboardBottomInTextView.y + 60.0; // 60.0是额外的偏移
+    if (offsetNeeded > 0) {
+        CGPoint contentOffset = self.contentOffset;
+        contentOffset.y += offsetNeeded;
+        [self setContentOffset:contentOffset animated:NO];
+//        UIEdgeInsets pointInsert = self.contentInset;
+//        pointInsert.bottom = offsetNeeded;
+//        self.contentInset = pointInsert;
+    }
+}
+#pragma mark - 监听键盘
+// 键盘弹出时的处理
+- (void)keyboardWillShow:(NSNotification *)notification {
+    // 获取键盘的 frame
+//    CGRect keyboardFrame = [[[notification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    [self updatePointFrameWithChanged];
 }
 
+// 键盘收回时的处理
+- (void)keyboardWillHide:(NSNotification *)notification {
+    // 恢复textView的contentOffset
+//    [self setContentOffset:CGPointZero animated:YES];
+}
 #pragma mark - 工具栏设置方法实现
 - (void)modifyAttributedText:(void (^)(NSMutableAttributedString *attributedString))block {
     NSRange range = self.selectedRange;
@@ -294,15 +328,21 @@
     
     [attachmentString addAttributes:[self updateTypeAttribute] range:NSMakeRange(0, attachmentString.length)];
     
+    // 在图片后插入换行符
+    NSAttributedString *newLine = [[NSAttributedString alloc] initWithString:@"\n"];
     [mAttributedString insertAttributedString:attachmentString atIndex:NSMaxRange(self.selectedRange)];
-    
+    [mAttributedString insertAttributedString:newLine atIndex:NSMaxRange(self.selectedRange) + 1];
+
     //更新attributedText
-    NSInteger location = NSMaxRange(self.selectedRange) + 1;
+    NSInteger location = NSMaxRange(self.selectedRange) + 2;
     self.attributedText = mAttributedString.copy;
     
     //恢复焦点
     self.selectedRange = NSMakeRange(location, 0);
-    [self becomeFirstResponder];
+    if (![self isFirstResponder]) {
+        [self resignFirstResponder];
+        [self becomeFirstResponder];
+    }
 }
 #pragma mark - 更新toolbar状态
 - (void)pointFocusChangedUpdateToolBarStyle {
@@ -310,12 +350,10 @@
     NSDictionary *attrs = self.typingAttributes;
     UIFont *font = attrs[NSFontAttributeName];
     BOOL isUnderLine = [attrs.allKeys containsObject:NSUnderlineStyleAttributeName];
-    if ([self.toolBarView isKindOfClass:[LKEditorToolBarView class]]) {
-        LKEditorToolBarView *barView = (LKEditorToolBarView *)self.toolBarView;
-        [barView updateToolBarItemSelectedState:TextFormattingStyleBold withActionValue:@(font.isBold)];
-        [barView updateToolBarItemSelectedState:TextFormattingStyleItatic withActionValue:@(font.isItatic)];
-        [barView updateToolBarItemSelectedState:TextFormattingStyleUnderline withActionValue:@(isUnderLine)];
-    }
+    LKEditorToolBarView *barView = (LKEditorToolBarView *)self.editorController.toolBarView;
+    [barView updateToolBarItemSelectedState:TextFormattingStyleBold withActionValue:@(font.isBold)];
+    [barView updateToolBarItemSelectedState:TextFormattingStyleItatic withActionValue:@(font.isItatic)];
+    [barView updateToolBarItemSelectedState:TextFormattingStyleUnderline withActionValue:@(isUnderLine)];
     
 }
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
@@ -353,15 +391,9 @@
 }
 
 #pragma mark - setter
-
-- (void)setShowKeyboardTool:(BOOL)showKeyboardTool {
-    _showKeyboardTool = showKeyboardTool;
-    [self configKeyboardToolBarView];
-}
-
-- (void)setToolBarDelegate:(id<LKRichTextEditorDelegate>)toolBarDelegate {
-    _toolBarDelegate = toolBarDelegate;
-    [self configKeyboardToolBarView];
+- (void)setToolBarDataSource:(id<LKEditorToolBarDataSourceDelegate>)toolBarDataSource {
+    _toolBarDataSource = toolBarDataSource;
+    [self.editorController.toolBarView updateToolbarItems:[self getToolBarItems]];
 }
 
 - (void)setPlaceholder:(NSString *)placeholder {
@@ -389,5 +421,15 @@
     self.placeHolderLabel.hidden = attributedText.string.length > 0;
     [self setNeedsDisplay];
 }
-
+#pragma mark - UI
+- (UILabel *)placeHolderLabel {
+    if (!_placeHolderLabel) {
+        _placeHolderLabel = [[UILabel alloc] init];
+        _placeHolderLabel.textColor = [UIColor lightGrayColor];
+        _placeHolderLabel.textAlignment = NSTextAlignmentLeft;
+        _placeHolderLabel.font = self.font;
+        _placeHolderLabel.text = @"请在此输入内容";
+    }
+    return _placeHolderLabel;
+}
 @end

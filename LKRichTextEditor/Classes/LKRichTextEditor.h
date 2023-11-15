@@ -12,11 +12,13 @@
 
 #import <LKRichTextEditor/LKEditorTextView.h>
 #import <LKRichTextEditor/LKEditorToolBarView.h>
+#import <LKRichTextEditor/LKEditorController.h>
 
 #else
 
 #import "LKEditorTextView.h"
 #import "LKEditorToolBarView.h"
+#import "LKEditorController.h"
 
 #endif  /* __has_include */
 

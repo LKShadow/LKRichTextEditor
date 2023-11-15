@@ -9,8 +9,6 @@
 #import "LKEditorTextView.h"
 NS_ASSUME_NONNULL_BEGIN
 
-/// 工具栏的高度，宽度默认屏幕宽度
-static CGFloat const Editor_ToolBar_Height = 40;
 
 @protocol LKEditorToolBarViewDelegate <NSObject>
 
