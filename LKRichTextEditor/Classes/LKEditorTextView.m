@@ -16,6 +16,9 @@
 
 @property (nonatomic, strong) LKEditorController *editorController;
 
+/** 默认字体大小，当输入图片后，self.font会为空*/
+@property (nonatomic, strong) UIFont *defaultFont;
+
 @property (nonatomic, strong) UILabel *placeHolderLabel;
 /** 设置占位文字的edge*/
 @property (nonatomic, assign) UIEdgeInsets placeholderEdgeInsets;
@@ -131,12 +134,12 @@
     id value = [self.textFormateStyleCache objectForKey:@(_actionType)];
     switch (_actionType) {
         case TextFormattingStyleBold:{
-            UIFont *font = [dict objectForKey:NSFontAttributeName] ?: [UIFont systemFontOfSize:15];
+            UIFont *font = [self.defaultFont copy];
             [dict setObject:[font copyWithBold:[value boolValue]] forKey:NSFontAttributeName];
             break;
         }
         case TextFormattingStyleItatic: {
-            UIFont *font = [dict objectForKey:NSFontAttributeName] ?: [UIFont systemFontOfSize:15];;
+            UIFont *font = [self.defaultFont copy];
             [dict setObject:[font copyWithItatic:[value boolValue]] forKey:NSFontAttributeName];
             break;
         }
@@ -152,14 +155,13 @@
             break;
         }
         case TextFormattingStyleNormal:
-        case TextFormattingStyleImage: {
+        case TextFormattingStyleImage:
+        default:{
             // 插入图片后，设置默认字体
-            UIFont *font = [dict objectForKey:NSFontAttributeName] ?: [UIFont systemFontOfSize:15];;
+            UIFont *font = [self.defaultFont copy];
             [dict setObject:font forKey:NSFontAttributeName];
             break;
         }
-            
-        default:
             break;
     }
     if (self.selectedRange.length <= 0) {
@@ -185,13 +187,14 @@
             [self setUnderlineInRange];
             break;
         case TextFormattingStyleImage: {
-            if ([value isKindOfClass:[UIImage class]]) {
-                [self insertImageInRange:(UIImage *)value];
+            if ([value isKindOfClass:[NSArray class]]) {
+                [self insertImagesInRange:value completion:^{
+                    [self updatePointFrameWithChanged];
+                }];
             }
             [self.editorController.toolBarView updateToolBarItemSelectedState:TextFormattingStyleImage withActionValue:@(NO)];
             _actionType = TextFormattingStyleNormal;
-            [self pointFocusChangedUpdateToolBarStyle];
-
+            [self resetEditorToolBarSelectedState];
 //            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 //                [self updatePointFrameWithChanged];
 //            });
@@ -310,40 +313,66 @@
     }];
 }
 /** 图片*/
-- (void)insertImageInRange:(UIImage *)image {
-    if (image == nil) {
+- (void)insertImagesInRange:(NSArray<UIImage *> *)images {
+    if (images.count == 0) {
         [self becomeFirstResponder];
         return;
     }
+    [self insertImagesInRange:images completion:^{
+        
+    }];
+}
 
-    CGFloat width = self.frame.size.width-self.textContainer.lineFragmentPadding*2;
-    
+- (void)insertImagesInRange:(NSArray<UIImage *> *)images completion:(void(^)(void))completion {
+    if (images.count == 0) {
+        [self becomeFirstResponder];
+        if (completion) {
+            completion();
+        }
+        return;
+    }
+
+    CGFloat width = self.frame.size.width - self.textContainer.lineFragmentPadding * 2;
+
     NSMutableAttributedString *mAttributedString = self.attributedText.mutableCopy;
-    
-    NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
-    attachment.bounds = CGRectMake(0, 0, width, width * image.size.height / image.size.width);
-    attachment.image = image;
-    
-    NSMutableAttributedString *attachmentString = [[NSMutableAttributedString alloc] initWithAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
-    
-    [attachmentString addAttributes:[self updateTypeAttribute] range:NSMakeRange(0, attachmentString.length)];
-    
-    // 在图片后插入换行符
-    NSAttributedString *newLine = [[NSAttributedString alloc] initWithString:@"\n"];
-    [mAttributedString insertAttributedString:attachmentString atIndex:NSMaxRange(self.selectedRange)];
-    [mAttributedString insertAttributedString:newLine atIndex:NSMaxRange(self.selectedRange) + 1];
+    NSInteger lastImageLocation = NSNotFound; // 记录最后一个图片的位置
 
-    //更新attributedText
-    NSInteger location = NSMaxRange(self.selectedRange) + 2;
+    for (UIImage *image in images) {
+        NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
+        attachment.bounds = CGRectMake(0, 0, width, width * image.size.height / image.size.width);
+        attachment.image = image;
+
+        NSMutableAttributedString *attachmentString = [[NSMutableAttributedString alloc] initWithAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
+
+        [attachmentString addAttributes:[self updateTypeAttribute] range:NSMakeRange(0, attachmentString.length)];
+
+        lastImageLocation = NSMaxRange(self.selectedRange); // 更新最后一个图片的位置
+        [mAttributedString insertAttributedString:attachmentString atIndex:lastImageLocation];
+        
+        // 在每张图片后插入换行符
+        NSAttributedString *newLine = [[NSAttributedString alloc] initWithString:@"\n"];
+        [mAttributedString insertAttributedString:newLine atIndex:lastImageLocation + 1];
+        
+        // 更新最后一个图片的位置
+        lastImageLocation += 2;
+    }
+    if (completion) {
+        completion();
+    }
+    // 计算新的selectedRange，将光标移动到插入最后一张图片的下一行
+    NSInteger newSelectedLocation = lastImageLocation;
+    self.selectedRange = NSMakeRange(newSelectedLocation, 0);
+
+    // 更新attributedText
     self.attributedText = mAttributedString.copy;
-    
-    //恢复焦点
-    self.selectedRange = NSMakeRange(location, 0);
+
     if (![self isFirstResponder]) {
         [self resignFirstResponder];
         [self becomeFirstResponder];
     }
 }
+
+
 #pragma mark - 更新toolbar状态
 - (void)pointFocusChangedUpdateToolBarStyle {
     if ([self isFirstResponder] == NO) return;
@@ -355,6 +384,13 @@
     [barView updateToolBarItemSelectedState:TextFormattingStyleItatic withActionValue:@(font.isItatic)];
     [barView updateToolBarItemSelectedState:TextFormattingStyleUnderline withActionValue:@(isUnderLine)];
     
+}
+// 重置状态栏的按钮选择状态
+- (void)resetEditorToolBarSelectedState {
+    LKEditorToolBarView *barView = (LKEditorToolBarView *)self.editorController.toolBarView;
+    [barView updateToolBarItemSelectedState:TextFormattingStyleBold withActionValue:@(NO)];
+    [barView updateToolBarItemSelectedState:TextFormattingStyleItatic withActionValue:@(NO)];
+    [barView updateToolBarItemSelectedState:TextFormattingStyleUnderline withActionValue:@(NO)];
 }
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     static UIEvent *e = nil;
@@ -408,6 +444,7 @@
 - (void)setFont:(UIFont *)font {
     [super setFont:font];
     _placeHolderLabel.font = font;
+    self.defaultFont = font;
 }
 
 - (void)setText:(NSString *)text {
@@ -420,6 +457,12 @@
     [super setAttributedText:attributedText];
     self.placeHolderLabel.hidden = attributedText.string.length > 0;
     [self setNeedsDisplay];
+}
+- (UIFont *)defaultFont {
+    if (self.font == nil) {
+        return [UIFont systemFontOfSize:16];
+    }
+    return self.font;
 }
 #pragma mark - UI
 - (UILabel *)placeHolderLabel {

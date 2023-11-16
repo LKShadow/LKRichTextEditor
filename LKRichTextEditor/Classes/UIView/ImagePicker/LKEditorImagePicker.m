@@ -16,7 +16,7 @@
 @interface LKEditorImagePicker () <UIImagePickerControllerDelegate, UINavigationControllerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout>
 
 @property (nonatomic, strong) UIImagePickerController *pickerController;
-@property (nonatomic, copy) void (^selectImage)(UIImage *image);
+@property (nonatomic, copy) void (^selectImage)(NSArray <UIImage *>*images);
 /** 显示照片*/
 @property (strong, nonatomic) UICollectionView *collectionView;
 /** 底部工具栏*/
@@ -166,16 +166,10 @@
 
 #pragma mark - LKEditorImagePickerProtocol
 
-- (void)showWithTextEditor:(UITextView *)textView completion:(void (^)(UIImage * _Nonnull))completion {
+- (void)showWithTextEditor:(UITextView *)textView completion:(void (^)(NSArray<UIImage *> * _Nonnull))completion {
     if (completion) {
         self.selectImage = completion;
     }
-//    if ([textView.inputAccessoryView isKindOfClass:[LKEditorToolBarView class]]) {
-//        textView.inputView = self;
-//        [textView resignFirstResponder];
-//        [textView becomeFirstResponder];
-//    }
-    
 }
 /** 已获得授权，请求本地相册数据*/
 - (void)requestPhotolibraryData {
@@ -261,34 +255,42 @@
 /** 点击发送或者确认事件*/
 - (void)clickSureSelectedImageEvent:(UIButton *)btn {
     if (self.choosePictures.count > 0) {
-        NSArray <PHAsset *>* list = self.choosePictures;
-        [self processAssetsWithDelay:list currentIndex:0];
+        NSArray<PHAsset *> *list = self.choosePictures;
+        // 创建 dispatch_group
+        dispatch_group_t group = dispatch_group_create();
+        // 临时数组用于存储获取到的 UIImage
+        NSMutableArray<UIImage *> *tempImages = [NSMutableArray array];
+        // 遍历 assets，每个任务加入 group
+        for (PHAsset *as in list) {
+            dispatch_group_enter(group);
+            __weak typeof(self) weakSelf = self;
+            [LKUISystemPhotoTool fetchImageDataForAsset:as completion:^(NSData * _Nonnull imageData, NSString * _Nonnull uti, UIImageOrientation orientation) {
+                UIImage *origenImage = [UIImage imageWithData:imageData];
+                UIImage *editImage = origenImage; // 是否压缩，默认压一半
+                if (!weakSelf.origenAlbumBtn.isSelected) {
+                    editImage = [LKUISystemPhotoTool compressionTheImaeg:origenImage maxMemory:300];
+                }
+                [tempImages addObject:editImage]; // 存储获取到的 UIImage
+                dispatch_group_leave(group);
+            }];
+        }
+        
+        // 所有任务完成后执行
+        dispatch_group_notify(group, dispatch_get_main_queue(), ^{
+            // 调用 selectImage block，并传递 tempImages
+            if (self.selectImage) {
+                self.selectImage([tempImages copy]);
+            }
+            // 清空选择的图片数组
+            [self.choosePictures removeAllObjects];
+            // 刷新 collectionView
+            [self.collectionView reloadData];
+            // 更新底部工具栏
+            [self updateBottomToolView];
+        });
     }
-    [self updateBottomToolView];
 }
 
-- (void)processAssetsWithDelay:(NSArray<PHAsset *> *)assets currentIndex:(NSUInteger)index {
-    if (index >= assets.count) {
-        [self.choosePictures removeAllObjects];
-        [self.collectionView reloadData];
-        return;
-    }
-
-    __weak typeof(self) weakSelf = self;
-    PHAsset *as = assets[index];
-    
-    [LKUISystemPhotoTool fetchImageDataForAsset:as completion:^(NSData * _Nonnull imageData, NSString * _Nonnull uti, UIImageOrientation orientation) {
-        UIImage *origenImage = [UIImage imageWithData:imageData];
-        UIImage *editImage = origenImage;// 是否压缩，默认压一半
-        if (!weakSelf.origenAlbumBtn.isSelected) {
-            editImage = [LKUISystemPhotoTool compressionTheImaeg:origenImage maxMemory:300];
-        }
-        if (weakSelf.selectImage) {
-            weakSelf.selectImage(editImage);
-        }
-        [weakSelf processAssetsWithDelay:assets currentIndex:index + 1];
-    }];
-}
 
 /** 判断当前相片是否是选中状态*/
 - (BOOL)judgePictureSelectedState:(PHAsset *)asset {

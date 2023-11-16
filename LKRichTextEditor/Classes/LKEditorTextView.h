@@ -32,7 +32,7 @@ typedef NS_ENUM(NSInteger, TextFormattingStyle) {
 
 @protocol LKEditorImagePickerProtocol
 /** 图片选择协议*/
-- (void)showWithTextEditor:(UITextView *)textView completion:(void (^) (UIImage *pickerImage))completion;
+- (void)showWithTextEditor:(UITextView *)textView completion:(void (^) (NSArray <UIImage *>*pickerImages))completion;
 
 @end
 

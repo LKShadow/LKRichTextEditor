@@ -102,8 +102,8 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
             [self.editor endEditing:YES];
             [self refreshToolBarFrame];
             self.imagePicker.hidden = NO;
-            [self.imagePicker showWithTextEditor:self.editor completion:^(UIImage * _Nonnull pickerImage) {
-                [self.editor toolBarItemSelectedStateAction:style withActionValue:pickerImage];
+            [self.imagePicker showWithTextEditor:self.editor completion:^(NSArray<UIImage *> * _Nonnull pickerImages) {
+                [self.editor toolBarItemSelectedStateAction:style withActionValue:pickerImages];
             }];
             // 当输入光标被遮挡时，将光标移动到可见范围
             [self.editor scrollRangeToVisible:self.editor.selectedRange];
