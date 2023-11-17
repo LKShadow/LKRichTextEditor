@@ -45,7 +45,7 @@ typedef NS_ENUM(NSInteger, TextFormattingStyle) {
 
 @end
 
-@interface LKEditorTextView : UITextView
+@interface LKEditorTextView : UITextView<UIScrollViewDelegate>
 
 @property (nonatomic, weak) id <LKEditorToolBarDataSourceDelegate>toolBarDataSource;
 /** textview显示高度最小值，当小于该值时，placeholder会默认居中显示，当大于该值时，placeholder默认离顶部距离为6*/

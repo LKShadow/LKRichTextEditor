@@ -33,11 +33,11 @@
     [textView.editorController showTextToolBarInView:self.view];
 
     [textView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.top.offset(100);
+        make.top.equalTo(self.view.mas_top).offset(100);
         make.centerX.equalTo(self.view.mas_centerX);
         make.left.offset(20);
         make.right.offset(-20);
-        make.height.mas_equalTo(450);
+        make.height.mas_equalTo(550);
     }];
     
 }

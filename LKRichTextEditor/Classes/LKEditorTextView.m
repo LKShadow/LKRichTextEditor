@@ -12,7 +12,11 @@
 //#import "LKEditorToolBarView.h"
 #import "LKEditorController.h"
 
-@interface LKEditorTextView ()<LKEditorEditProtocol>
+@interface LKEditorTextView ()<LKEditorEditProtocol,UIScrollViewDelegate> {
+    // 保存键盘弹出时的通知信息，用于获取键盘信息
+    NSNotification          *_kbShowNotification;
+
+}
 
 @property (nonatomic, strong) LKEditorController *editorController;
 
@@ -43,7 +47,6 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        
         self.showsHorizontalScrollIndicator = NO;
         [self initDefault];
         
@@ -56,6 +59,7 @@
 }
 // 初始化默认值
 - (void)initDefault {
+    self.inputAccessoryView = nil;
     // 设置默认颜色
     self.placeholderColor = [UIColor colorWithRed:128.0f/255.0f green:128.0f/255.0f blue:128.0f/255.0f alpha:1.0f];
     self.placeholder = @"请在此输入内容";
@@ -86,7 +90,6 @@
                                              selector:@selector(keyboardWillHide:)
                                                  name:UIKeyboardWillHideNotification
                                                object:nil];
-
 
 }
 
@@ -189,15 +192,14 @@
         case TextFormattingStyleImage: {
             if ([value isKindOfClass:[NSArray class]]) {
                 [self insertImagesInRange:value completion:^{
-                    [self updatePointFrameWithChanged];
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        [self updatePointFrameWithChanged];
+                        [self resetEditorToolBarSelectedState];
+                    });
                 }];
             }
             [self.editorController.toolBarView updateToolBarItemSelectedState:TextFormattingStyleImage withActionValue:@(NO)];
             _actionType = TextFormattingStyleNormal;
-            [self resetEditorToolBarSelectedState];
-//            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-//                [self updatePointFrameWithChanged];
-//            });
             break;
         }
         default:
@@ -206,37 +208,43 @@
     [self updateTypeAttribute];
 }
 - (void)updatePointFrameWithChanged {
-    // 获取光标所在的文本范围
+    if (_kbShowNotification == nil) return;
+    UIWindow *showWindow = [UIApplication sharedApplication].keyWindow;
+    // 获取键盘的最终位置信息，包括键盘的高度和位置
+    CGRect keyboardFrame = [[[_kbShowNotification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    
+    // 获取当前文本输入框中光标的位置
     UITextPosition *cursorPosition = [self selectedTextRange].start;
     CGRect caretRect = [self caretRectForPosition:cursorPosition];
-
-    // 将键盘的底部坐标转换为textView的坐标系
-    CGPoint keyboardBottomInTextView = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMaxY(self.bounds));
-    keyboardBottomInTextView = [self convertPoint:keyboardBottomInTextView toView:self];
-
-    // 如果光标被键盘遮挡，需要调整textView的contentOffset
-    CGFloat offsetNeeded = (CGRectGetMaxY(caretRect) ) - keyboardBottomInTextView.y + 60.0; // 60.0是额外的偏移
+    CGPoint careMaxPoint = CGPointMake(CGRectGetMaxX(caretRect), CGRectGetMaxY(caretRect));
+    // 将光标最大坐标点转换为文本输入框父视图坐标系中
+    CGPoint carePointOnSuperView = [self convertPoint:careMaxPoint toView:showWindow];
+    
+    // 将键盘的位置转换为文本输入框父视图坐标系中
+//    CGRect keyboardInSuperView = [self convertRect:keyboardFrame toView:showWindow];
+    CGPoint keyboardBottomInTextView = CGPointMake(CGRectGetMidX(keyboardFrame), CGRectGetMinY(keyboardFrame));
+    // 计算光标最大坐标点与键盘底部在文本输入框父视图中的位置之间的垂直偏移量，额外减去60.0的偏移
+    CGFloat offsetNeeded = carePointOnSuperView.y - keyboardBottomInTextView.y + 60.0;
+    // 只有在光标被遮挡时才移动offset
     if (offsetNeeded > 0) {
+        // 移动文本输入框的内容偏移，确保光标不被键盘遮挡
         CGPoint contentOffset = self.contentOffset;
         contentOffset.y += offsetNeeded;
         [self setContentOffset:contentOffset animated:NO];
-//        UIEdgeInsets pointInsert = self.contentInset;
-//        pointInsert.bottom = offsetNeeded;
-//        self.contentInset = pointInsert;
     }
+
 }
 #pragma mark - 监听键盘
-// 键盘弹出时的处理
 - (void)keyboardWillShow:(NSNotification *)notification {
-    // 获取键盘的 frame
-//    CGRect keyboardFrame = [[[notification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    _kbShowNotification = notification;
     [self updatePointFrameWithChanged];
 }
 
 // 键盘收回时的处理
 - (void)keyboardWillHide:(NSNotification *)notification {
     // 恢复textView的contentOffset
-//    [self setContentOffset:CGPointZero animated:YES];
+    self.contentInset = UIEdgeInsetsZero;
+    self.scrollIndicatorInsets = UIEdgeInsetsZero;
 }
 #pragma mark - 工具栏设置方法实现
 - (void)modifyAttributedText:(void (^)(NSMutableAttributedString *attributedString))block {
@@ -346,7 +354,7 @@
 
         [attachmentString addAttributes:[self updateTypeAttribute] range:NSMakeRange(0, attachmentString.length)];
 
-        lastImageLocation = NSMaxRange(self.selectedRange); // 更新最后一个图片的位置
+        lastImageLocation = lastImageLocation == NSNotFound ? NSMaxRange(self.selectedRange) : lastImageLocation; // 更新最后一个图片的位置
         [mAttributedString insertAttributedString:attachmentString atIndex:lastImageLocation];
         
         // 在每张图片后插入换行符
