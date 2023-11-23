@@ -7,6 +7,7 @@
 
 #import "LKHTMLParser.h"
 #import "UIFont+TextFormat.h"
+#import <LKRichTextEditor/UIImage+Editor.h>
 
 NSString * const ImagePlaceholderTag = @"\U0000fffc";
 
@@ -43,7 +44,7 @@ NSString * const ImagePlaceholderTag = @"\U0000fffc";
         if ([selectString isEqualToString:ImagePlaceholderTag]) {
             NSTextAttachment *attachment = attrs[NSAttachmentAttributeName];
             if (attachment.image) {
-                [html appendFormat:@"<img src='[image%ld]' />", images.count];
+                [html appendFormat:@"<img src='[image_%@]' class='image'/>", [attachment.image calculateMD5ForImage]];
                 [images addObject:attachment.image];
             } else {
                 NSString *imageName = [[attachment.fileWrapper.preferredFilename stringByDeletingPathExtension] stringByDeletingPathExtension];
@@ -62,7 +63,7 @@ NSString * const ImagePlaceholderTag = @"\U0000fffc";
             //字号
             CGFloat fontSize = font.fontSize;
             CGFloat location = html.length;
-            [html appendFormat:@"<span style=\"color:%@; font-size:%.0fpx;\">%@</span>", textColor, fontSize, selectString];
+            [html appendFormat:@"<p style=\"color:%@; font-size:%.0fpx;\">%@</p>", textColor, fontSize, selectString];
             //斜体
             if (font.isItatic) {
                 [html insertString:@"<i>" atIndex:location];
@@ -82,15 +83,17 @@ NSString * const ImagePlaceholderTag = @"\U0000fffc";
     }];
     [html replaceOccurrencesOfString:@"\n" withString:@"<br/>" options:0 range:NSMakeRange(0, html.length)];
     [html replaceOccurrencesOfString:@"null" withString:@"" options:0 range:NSMakeRange(0, html.length)];
-    if (images.count) { //上传图片
-//        [self.imageUploader upload:images completion:^(NSDictionary<NSString *,NSString *> * _Nonnull map) {
-//            for (int i=0; i<images.count; i++) {
-//                if (map[images[i]]) {
-//                    [html replaceOccurrencesOfString:[NSString stringWithFormat:@"[image%d]", i] withString:images[i] options:(NSLiteralSearch) range:NSMakeRange(0, html.length)];
-//                }
-//            }
-//            completion(html);
-//        }];
+    if (images.count && self.imageUpLoader) { //上传图片
+        [self.imageUpLoader upload:images completion:^(NSDictionary<NSString *,NSString *> * _Nonnull map) {
+            for (UIImage *img in images) {
+                NSString *key = [img calculateMD5ForImage];
+                if (key) {
+                    NSString *value = [map valueForKey:key];
+                    [html replaceOccurrencesOfString:[NSString stringWithFormat:@"[image_%@]", [img calculateMD5ForImage]] withString:value options:(NSLiteralSearch) range:NSMakeRange(0, html.length)];
+                }
+            }
+            completion(html);
+        }];
     } else {
         completion(html);
     }

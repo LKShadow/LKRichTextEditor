@@ -16,6 +16,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, strong, readonly) LKEditorToolBarView *toolBarView;
 
+/** 记录keyboard的显示状态*/
+@property (nonatomic, assign, readonly) BOOL showKeyboard;
+
 /**
  * 将工具栏显示在指定view上, 默认位置是在键盘顶部
  */

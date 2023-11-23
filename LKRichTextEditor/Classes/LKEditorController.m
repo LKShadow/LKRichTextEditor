@@ -59,14 +59,30 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
 - (void)showTextToolBarInView:(UIView *)showView {
     NSAssert(showView, @"父view不能nil");
     if (!showView) return;
+    self.toolBarView.alpha = 1;
     [showView addSubview:self.toolBarView];
-    
+    if (self.toolBarView.formattingStyles.count == 0) {
+        // 没有设置代理，使用默认
+        [self.toolBarView updateToolbarItems:[self getToolBarItems]];
+    }
     [self refreshToolBarFrame];
+    [self.editor becomeFirstResponder];
     
+}
+- (NSArray <NSNumber *>*)getToolBarItems {
+    return @[@(TextFormattingStyleDismiss),@(TextFormattingStyleBold),@(TextFormattingStyleItatic),@(TextFormattingStyleUnderline)];
 }
 - (void)refreshToolBarFrame {
     if (self.toolBarView.superview) {
         CGFloat bottomOffset = self.showKeyboard ? (-keyboardHeight) : (-bottomSafeAreaHeight);
+        
+        CGPoint maxPoint = CGPointMake(CGRectGetMinX(self.toolBarView.superview.frame), CGRectGetMaxY(self.toolBarView.superview.frame));
+        CGPoint windowPoint = [self.toolBarView.superview convertPoint:maxPoint toView:[[[UIApplication sharedApplication] delegate] window]];
+        CGFloat edgeBottom = [UIScreen mainScreen].bounds.size.height - windowPoint.y;
+        if (edgeBottom >= 0) {
+            bottomOffset = 0;
+        }
+        
         [self.toolBarView mas_remakeConstraints:^(MASConstraintMaker *make) {
             make.left.right.offset(0);
             make.bottom.offset(bottomOffset);
@@ -109,6 +125,17 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
             [self.editor scrollRangeToVisible:self.editor.selectedRange];
             break;
         }
+        case TextFormattingStyleDismiss: {
+            [UIView animateWithDuration:.3 animations:^{
+                [self.toolBarView removeFromSuperview];
+                [self.toolBarView mas_updateConstraints:^(MASConstraintMaker *make) {
+                    make.height.mas_equalTo(0.1);
+                }];
+            } completion:^(BOOL finished) {
+                self.toolBarView = nil;
+            }];
+        }
+            break;
         default:
             break;
     }
@@ -117,9 +144,7 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
 #pragma mark - Getter && setter
 /// 输入框
 - (void)setEditor:(UITextView<LKEditorEditProtocol> *)editor {
-    _editor = editor;
-    _editor.delegate = self;
-    
+    _editor = editor;    
 }
 /** 工具栏*/
 - (LKEditorToolBarView *)toolBarView {
@@ -148,15 +173,18 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
 - (void)addKeyboardNotifications {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShowOrHide:) name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShowOrHide:) name:UIKeyboardWillHideNotification object:nil];
-
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textViewDidBeginEditingWithNotification:) name:UITextViewTextDidBeginEditingNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(textViewDidEndEditingWithNotification:) name:UITextViewTextDidEndEditingNotification object:nil];
 }
 - (void)removeKeyboardNotifications {
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillHideNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UITextViewTextDidBeginEditingNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UITextViewTextDidEndEditingNotification object:nil];
 }
 #pragma mark -- UITextViewDelegate 输入框编辑状态变化
 /** 开始编辑*/
-- (void)textViewDidBeginEditing:(UITextView *)textView {
+- (void)textViewDidBeginEditingWithNotification:(NSNotification *)noti {
     if (_actionType == TextFormattingStyleImage) {
         self.imagePicker.hidden = YES;
         _actionType = TextFormattingStyleNormal;
@@ -165,7 +193,7 @@ static CGFloat const Editor_ImageSelected_Height = 200 + 50;
     }
 }
 /** 结束编辑*/
-- (void)textViewDidEndEditing:(UITextView *)textView {
+- (void)textViewDidEndEditingWithNotification:(NSNotification *)noti {
     [self refreshToolBarFrame];
 }
 #pragma mark -- 键盘变化

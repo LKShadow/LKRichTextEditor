@@ -28,7 +28,7 @@ Pod::Spec.new do |s|
   s.source           = { :git => 'https://github.com/LKShadow/LKRichTextEditor.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
-  s.ios.deployment_target = '11.0' # 设置支持的iOS最低版本
+  s.ios.deployment_target = '9.0' # 设置支持的iOS最低版本
 
   s.source_files = 'LKRichTextEditor/Classes/**/*'
   

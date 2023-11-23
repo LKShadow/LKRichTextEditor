@@ -9,7 +9,7 @@
 #import "LKViewController.h"
 #import <LKRichTextEditor.h>
 #import <Masonry/Masonry.h>
-@interface LKViewController ()<LKEditorToolBarDataSourceDelegate>
+@interface LKViewController ()<LKEditorToolBarDataSourceDelegate,UITextViewDelegate>
 
 @property (nonatomic, strong) LKEditorTextView *textView;
 @end
@@ -24,6 +24,7 @@
     LKEditorTextView *textView = [[LKEditorTextView alloc] init];
     textView.toolBarDataSource = self;
     textView.placeholder = @"请输入文字";
+    textView.delegate = self;
     textView.placeholderColor = [UIColor grayColor];
     textView.layer.borderColor = [UIColor blueColor].CGColor;
     textView.layer.borderWidth = 1;
@@ -37,13 +38,19 @@
         make.centerX.equalTo(self.view.mas_centerX);
         make.left.offset(20);
         make.right.offset(-20);
-        make.height.mas_equalTo(550);
+        make.height.mas_equalTo(106);
     }];
     
 }
 
 - (NSArray<NSNumber *> *)supportToolBarItems {
     return @[@(TextFormattingStyleBold),@(TextFormattingStyleItatic),@(TextFormattingStyleUnderline),@(TextFormattingStyleImage)];
+}
+
+- (BOOL)textView:(UITextView *)textView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text {
+    
+    NSLog(@"%@",textView.text);
+    return YES;
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {

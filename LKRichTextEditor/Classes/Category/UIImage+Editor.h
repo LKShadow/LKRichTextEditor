@@ -12,7 +12,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface UIImage (Editor)
 
 + (UIImage *)resourceWithImageName:(NSString *)imageName;
-
+/** 计算图片的MD5值*/
+- (NSString *)calculateMD5ForImage;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -15,7 +15,7 @@ static CGFloat const Editor_ToolBar_Height = 40;
     CGFloat _itemWidth;// 单个item的宽度
 }
 
-
+/** 数据源*/
 @property (nonatomic, strong) NSArray *formattingStyles;
 
 @property (nonatomic, strong) UIScrollView *scrollView;
@@ -56,10 +56,10 @@ static CGFloat const Editor_ToolBar_Height = 40;
     [scrollView addSubview:stackView];
     _stackView = stackView;
 
-    CALayer *line = [CALayer layer];
-    line.backgroundColor = [UIColor lightGrayColor].CGColor;
-    line.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, 1);
-    [self.layer addSublayer:line];
+//    CALayer *line = [CALayer layer];
+//    line.backgroundColor = [UIColor lightGrayColor].CGColor;
+//    line.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, 1);
+//    [self.layer addSublayer:line];
 }
 - (void)updateToolbarItems:(NSArray *)styles {
     self.formattingStyles = styles;
@@ -101,6 +101,7 @@ static CGFloat const Editor_ToolBar_Height = 40;
     TextFormattingStyle style = button.tag;
     UIButton *tapBtn = [self.actionCache objectForKey:@(style)];
     switch (style) {
+        case TextFormattingStyleDismiss:
         case TextFormattingStyleBold:
         case TextFormattingStyleItatic:
         case TextFormattingStyleUnderline: {
@@ -168,6 +169,9 @@ static CGFloat const Editor_ToolBar_Height = 40;
         case TextFormattingStyleImage:
             iconName = @"Editor_image";
             break;
+        case TextFormattingStyleDismiss:
+            iconName = @"Editor_toolBar_dismiss";
+            break;
         default:
             iconName = nil;
             break;
@@ -196,6 +200,9 @@ static CGFloat const Editor_ToolBar_Height = 40;
             break;
         case TextFormattingStyleImage:
             iconName = @"Editor_image_selected";
+            break;
+        case TextFormattingStyleDismiss:
+            iconName = @"Editor_toolBar_dismiss";
             break;
         default:
             iconName = nil;

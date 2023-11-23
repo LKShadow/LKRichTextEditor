@@ -11,6 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 typedef NS_ENUM(NSInteger, TextFormattingStyle) {
+    TextFormattingStyleDismiss,     ///< 取消显示，隐藏界面
     TextFormattingStyleNormal = 10, ///< 普通文本
     TextFormattingStyleBold,        ///< 粗体
     TextFormattingStyleUnderline,   ///< 下划线
@@ -35,6 +36,18 @@ typedef NS_ENUM(NSInteger, TextFormattingStyle) {
 - (void)showWithTextEditor:(UITextView *)textView completion:(void (^) (NSArray <UIImage *>*pickerImages))completion;
 
 @end
+@protocol LKEditorUploadImageProtocol <NSObject>
+
+/**
+ * 图片上传协议
+ * @Param images 要上传的图片
+ * @Param completion 返回字典，其中已image的MD5值为key，链接为value
+ */
+- (void)upload:(NSArray<UIImage *> *_Nonnull)images
+        completion:(void (^_Nonnull)(NSDictionary<NSString *, NSString *> * _Nonnull map))completion;
+
+
+@end
 
 
 @protocol LKEditorToolBarDataSourceDelegate <NSObject>
@@ -56,6 +69,15 @@ typedef NS_ENUM(NSInteger, TextFormattingStyle) {
 @property (nonatomic, strong) UIColor *placeholderColor;
 /** 工具栏相关控制管理器,只有设置datasource代理，才可以获取该值*/
 @property (nonatomic, strong, readonly) LKEditorController *editorController;
+
+/** 插入图片或表情
+ *  image 要插入的图片
+ *  imgSize 插入的尺寸大小，为空默认图片大小
+ */
+- (void)replaceText:(NSString *)text andInsertImage:(UIImage *)image  withImageSize:(CGSize)imgSize;
+
+// 本地图片上传代理
+- (void)setImageUploader:(id <LKEditorUploadImageProtocol>)uploader;
 
 /**
  * html转富文本

@@ -6,10 +6,14 @@
 //  数据转换过程：(双向) NSAttributedString <-> HTML
 
 #import <Foundation/Foundation.h>
+#import <LKRichTextEditor/LKRichTextEditor.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LKHTMLParser : NSObject
+
+@property (nonatomic, strong) id<LKEditorUploadImageProtocol> imageUpLoader;
+
 /** 富文本转html*/
 - (void)htmlWithAttributed:(NSAttributedString *)attributed
                         orignalHtml:(NSString *__nullable)orignalHtml

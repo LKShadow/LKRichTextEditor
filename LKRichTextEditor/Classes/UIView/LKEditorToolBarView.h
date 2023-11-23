@@ -19,6 +19,8 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 @interface LKEditorToolBarView : UIView
+/** 数据源*/
+@property (nonatomic, strong, readonly) NSArray *formattingStyles;
 
 - (void)updateToolbarItems:(NSArray *)styles;
 /** 更新状态来对应的选中状态状态*/

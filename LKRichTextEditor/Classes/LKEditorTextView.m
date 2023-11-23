@@ -12,7 +12,7 @@
 //#import "LKEditorToolBarView.h"
 #import "LKEditorController.h"
 
-@interface LKEditorTextView ()<LKEditorEditProtocol,UIScrollViewDelegate> {
+@interface LKEditorTextView ()<LKEditorEditProtocol,UIScrollViewDelegate, UITextViewDelegate> {
     // 保存键盘弹出时的通知信息，用于获取键盘信息
     NSNotification          *_kbShowNotification;
 
@@ -59,13 +59,14 @@
 }
 // 初始化默认值
 - (void)initDefault {
+    self.delegate = self;
     self.inputAccessoryView = nil;
     // 设置默认颜色
     self.placeholderColor = [UIColor colorWithRed:128.0f/255.0f green:128.0f/255.0f blue:128.0f/255.0f alpha:1.0f];
     self.placeholder = @"请在此输入内容";
     self.font = [UIFont systemFontOfSize:16];
     self.minTextViewHeight = 40;
-    self.placeholderEdgeInsets = UIEdgeInsetsMake(6, 6, 0, -4);
+    self.placeholderEdgeInsets = UIEdgeInsetsMake(8, 6, 0, -4);
     self.contentOffset = CGPointMake(self.placeholderEdgeInsets.left, self.placeholderEdgeInsets.top);
     
     self.actionType = TextFormattingStyleNormal;
@@ -102,12 +103,13 @@
         NSArray *list = [self.toolBarDataSource supportToolBarItems];
         return list;
     }
-    return @[@(TextFormattingStyleBold),@(TextFormattingStyleItatic),@(TextFormattingStyleUnderline)];
+    return @[@(TextFormattingStyleDismiss),@(TextFormattingStyleBold),@(TextFormattingStyleItatic),@(TextFormattingStyleUnderline)];
 }
 - (void)textDidChange:(NSNotification *)note {
     self.placeHolderLabel.hidden = self.text.length > 0 || self.attributedText.string.length > 0;
 
     [self updatePointFrameWithChanged];
+    [self pointFocusChangedUpdateToolBarStyle];
 
 }
 - (void)layoutSubviews {
@@ -125,7 +127,7 @@
     CGFloat adjustedWidth = self.frame.size.width - (fabs(self.placeholderEdgeInsets.right) + self.placeholderEdgeInsets.left);
     // 当高度小于 minTextViewHeight 时，垂直居中显示占位符
     if (self.frame.size.height < self.minTextViewHeight) {
-        pointY = MAX((self.frame.size.height - placeholderSize.height) / 2 - 2, 0);
+        pointY = MAX((self.frame.size.height - placeholderSize.height) / 2, 0);
     }
     
     CGRect rect = CGRectMake(adjustedLeft, pointY, adjustedWidth, placeholderSize.height);
@@ -208,6 +210,9 @@
     [self updateTypeAttribute];
 }
 - (void)updatePointFrameWithChanged {
+    if (!self.editorController.showKeyboard) {
+        return;
+    }
     if (_kbShowNotification == nil) return;
     UIWindow *showWindow = [UIApplication sharedApplication].keyWindow;
     // 获取键盘的最终位置信息，包括键盘的高度和位置
@@ -224,7 +229,7 @@
 //    CGRect keyboardInSuperView = [self convertRect:keyboardFrame toView:showWindow];
     CGPoint keyboardBottomInTextView = CGPointMake(CGRectGetMidX(keyboardFrame), CGRectGetMinY(keyboardFrame));
     // 计算光标最大坐标点与键盘底部在文本输入框父视图中的位置之间的垂直偏移量，额外减去60.0的偏移
-    CGFloat offsetNeeded = carePointOnSuperView.y - keyboardBottomInTextView.y + 60.0;
+    CGFloat offsetNeeded = carePointOnSuperView.y - keyboardBottomInTextView.y;
     // 只有在光标被遮挡时才移动offset
     if (offsetNeeded > 0) {
         // 移动文本输入框的内容偏移，确保光标不被键盘遮挡
@@ -379,7 +384,29 @@
         [self becomeFirstResponder];
     }
 }
-
+- (void)replaceText:(NSString *)text andInsertImage:(UIImage *)image  withImageSize:(CGSize)imgSize {
+    if (text == nil || image == nil) {
+        return;
+    }
+    if (CGSizeEqualToSize(imgSize, CGSizeZero)) {
+        imgSize = image.size;
+    }
+    NSMutableAttributedString *mAttributedString = self.attributedText.mutableCopy;
+    NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
+    attachment.bounds = CGRectMake(2, -4, imgSize.width, imgSize.height);
+    attachment.image = image;
+    NSMutableAttributedString *attachmentString = [[NSMutableAttributedString alloc] initWithAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
+    [attachmentString addAttributes:[self updateTypeAttribute] range:NSMakeRange(0, attachmentString.length)];
+    NSRange replaceRange = [mAttributedString.string rangeOfString:text];
+    [mAttributedString replaceCharactersInRange:replaceRange withAttributedString:attachmentString];
+//    [mAttributedString insertAttributedString:attachmentString atIndex:self.selectedRange.location];
+    
+    
+    self.selectedRange = NSMakeRange(self.selectedRange.location + 1, 0);
+    // 更新attributedText
+    self.attributedText = mAttributedString.copy;
+    [self pointFocusChangedUpdateToolBarStyle];
+}
 
 #pragma mark - 更新toolbar状态
 - (void)pointFocusChangedUpdateToolBarStyle {
@@ -435,6 +462,10 @@
 }
 
 #pragma mark - setter
+
+- (void)setImageUploader:(id<LKEditorUploadImageProtocol>)uploader {
+    self.parser.imageUpLoader = uploader;
+}
 - (void)setToolBarDataSource:(id<LKEditorToolBarDataSourceDelegate>)toolBarDataSource {
     _toolBarDataSource = toolBarDataSource;
     [self.editorController.toolBarView updateToolbarItems:[self getToolBarItems]];
